@@ -46,7 +46,7 @@ public:
 	void GetKeyPoints(const char* image_path, std::vector<SiftGPU::SiftKeypoint>& key, std::vector<float>& descriptor);
 	void SaveKeyPoints(const char* image_path, const char* keypoint_path);
 	void LoadKeyPoints(const char* keypoint_path, std::vector<SiftGPU::SiftKeypoint>& key, std::vector<float>& descriptor);
-	int GetMachedPoints(std::vector<SiftGPU::SiftKeypoint>& key1, const float* descriptor1, std::vector<SiftGPU::SiftKeypoint>& key2, const float* descriptor2, std::vector<SamePoint>& result);
+	int GetMatchedPoints(std::vector<SiftGPU::SiftKeypoint>& key1, const float* descriptor1, std::vector<SiftGPU::SiftKeypoint>& key2, const float* descriptor2, std::vector<SamePoint>& result);
 
 protected:
 

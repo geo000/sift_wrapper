@@ -90,7 +90,7 @@ void Sift::GetKeyPoints(const char* image_path,
 	}
 }
 
-int Sift::GetMachedPoints(std::vector<SiftGPU::SiftKeypoint>& key1,
+int Sift::GetMatchedPoints(std::vector<SiftGPU::SiftKeypoint>& key1,
 	const float* descriptor1, std::vector<SiftGPU::SiftKeypoint>& key2,
 	const float* descriptor2, std::vector<SamePoint>& result)
 {
