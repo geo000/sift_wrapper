@@ -25,11 +25,30 @@ Sift::Sift()
 	char * argv[] = {"-fo", "-1",  "-v", "1"};
 	int argc = sizeof(argv)/sizeof(char*);
 	_sift_gpu->ParseParam(argc, argv);
+
+	if (_sift_gpu->CreateContextGL() != SiftGPU::SIFTGPU_FULL_SUPPORTED)
+	{
+		delete _sift_gpu;
+		_sift_gpu = NULL;
+		delete _matcher;
+		_matcher = NULL;
+		FREE_MYLIB(_hsiftgpu);
+		throw;
+	}
+
+	_matcher->VerifyContextGL();
 }
 
 Sift::~Sift()
 {
-
+	if (_sift != NULL)
+	{
+		delete _sift_gpu;
+		_sift_gpu = NULL;
+		delete _matcher;
+		_matcher = NULL;
+		FREE_MYLIB(_hsiftgpu);
+	}
 }
 
 Sift* Sift::GetInstance()
@@ -54,6 +73,18 @@ void Sift::Release()
 	{
 		delete _sift;
 		_sift = NULL;
+	}
+}
+
+void Sift::GetKeyPoints(const char* image_path, std::vector<SiftGPU::SiftKeypoint>& key, std::vector<float>& descriptor)
+{
+	if (_sift_gpu->RunSIFT(image_path))
+	{
+		int num = _sift_gpu->GetFeatureNum();
+		key.resize(num);
+		descriptor.resize(128*num);
+
+		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
 	}
 }
 
