@@ -11,10 +11,14 @@ Sift::Sift()
 	, _sift_gpu(NULL)
 	, _matcher(NULL)
 {
-	_hsiftgpu = LoadLibrary("siftgpu64.dll");
+}
+
+bool Sift::Init()
+{
+	_hsiftgpu = LoadLibrary("SiftGPU.dll");
 	if (_hsiftgpu == NULL)
 	{
-		throw;
+		return false;
 	}
 
 	_pCreateNewSiftGPU = (SiftGPU* (*) (int)) GET_MYPROC(_hsiftgpu, "CreateNewSiftGPU");
@@ -33,21 +37,30 @@ Sift::Sift()
 		delete _matcher;
 		_matcher = NULL;
 		FREE_MYLIB(_hsiftgpu);
-		throw;
+		_hsiftgpu = NULL;
+		return false;
 	}
 
 	_matcher->VerifyContextGL();
+	return true;
 }
 
 Sift::~Sift()
 {
-	if (_sift != NULL)
+	if (_sift_gpu != NULL)
 	{
 		delete _sift_gpu;
 		_sift_gpu = NULL;
+	}
+	if (_matcher != NULL)
+	{
 		delete _matcher;
 		_matcher = NULL;
+	}
+	if (_hsiftgpu != NULL)
+	{
 		FREE_MYLIB(_hsiftgpu);
+		_hsiftgpu = NULL;
 	}
 }
 
@@ -55,11 +68,8 @@ Sift* Sift::GetInstance()
 {
 	if (_sift == NULL)
 	{
-		try
-		{
-			_sift = new Sift();
-		}
-		catch (...)
+		_sift = new Sift();
+		if (!_sift->Init())
 		{
 			return NULL;
 		}
@@ -105,8 +115,8 @@ int Sift::GetMatchedPoints(std::vector<SiftGPU::SiftKeypoint>& key1,
 
 	for (int i = 0; i < num_match; ++i)
 	{
-		result.push_back(SamePoint(key1[match_buf[i][0]].x, key1[match_buf[i][0]].y,
-			key1[match_buf[i][1]].x, key1[match_buf[i][1]].y));
+		result[i] = SamePoint(key1[match_buf[i][0]].x, key1[match_buf[i][0]].y,
+			key1[match_buf[i][1]].x, key1[match_buf[i][1]].y);
 	}
 
 	delete []match_buf;

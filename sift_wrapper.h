@@ -54,8 +54,9 @@ private:
 
 	Sift();
 	~Sift();
+	bool Init();
 	static Sift* _sift;
-	HINSTANCE _hsiftgpu;
+	HMODULE _hsiftgpu;
 	pCreateNewSiftGPU _pCreateNewSiftGPU;
 	pCreateNewSiftMatchGPU _pCreateNewSiftMatchGPU;
 	SiftGPU* _sift_gpu;
