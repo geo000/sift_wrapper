@@ -7,9 +7,17 @@
 #define _SIFT_API_ __declspec(dllimport)
 #endif
 
-#define NULL 0
+#include <afx.h>
+#include <afxwin.h>
+#include <WinDef.h>
+
+#define FREE_MYLIB FreeLibrary
+#define GET_MYPROC GetProcAddress
 
 #include "SiftGPU.h"
+
+typedef SiftGPU* (*pCreateNewSiftGPU)(int);
+typedef SiftMatchGPU* (*pCreateNewSiftMatchGPU)(int);
 
 class _SIFT_API_ Sift
 {
@@ -20,6 +28,11 @@ private:
 	Sift();
 	~Sift();
 	static Sift* _sift;
+	HINSTANCE _hsiftgpu;
+	pCreateNewSiftGPU _pCreateNewSiftGPU;
+	pCreateNewSiftMatchGPU _pCreateNewSiftMatchGPU;
+	SiftGPU* _sift_gpu;
+	SiftMatchGPU* _matcher;
 };
 
 
