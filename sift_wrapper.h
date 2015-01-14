@@ -23,6 +23,7 @@ class _SIFT_API_ Sift
 {
 public:
 	static Sift* GetInstance();
+	static void Release();
 protected:
 private:
 	Sift();
