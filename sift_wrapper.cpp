@@ -76,7 +76,9 @@ void Sift::Release()
 	}
 }
 
-void Sift::GetKeyPoints(const char* image_path, std::vector<SiftGPU::SiftKeypoint>& key, std::vector<float>& descriptor)
+void Sift::GetKeyPoints(const char* image_path,
+	std::vector<SiftGPU::SiftKeypoint>& key,
+	std::vector<float>& descriptor)
 {
 	if (_sift_gpu->RunSIFT(image_path))
 	{
@@ -86,5 +88,29 @@ void Sift::GetKeyPoints(const char* image_path, std::vector<SiftGPU::SiftKeypoin
 
 		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
 	}
+}
+
+int Sift::GetMachedPoints(std::vector<SiftGPU::SiftKeypoint>& key1,
+	const float* descriptor1, std::vector<SiftGPU::SiftKeypoint>& key2,
+	const float* descriptor2, std::vector<SamePoint>& result)
+{
+	_matcher->SetDescriptors(0, key1.size(), descriptor1);
+	_matcher->SetDescriptors(1, key2.size(), descriptor2);
+
+	int (*match_buf)[2] = new int [key1.size()][2];
+
+	int num_match = _matcher->GetSiftMatch(key1.size(), match_buf);
+
+	result.resize(num_match);
+
+	for (int i = 0; i < num_match; ++i)
+	{
+		result.push_back(SamePoint(key1[match_buf[i][0]].x, key1[match_buf[i][0]].y,
+			key1[match_buf[i][1]].x, key1[match_buf[i][1]].y));
+	}
+
+	delete []match_buf;
+
+	return num_match;
 }
 
