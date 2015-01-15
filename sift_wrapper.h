@@ -7,8 +7,8 @@
 #define _SIFT_API_ __declspec(dllimport)
 #endif
 
-#include <afx.h>
-#include <afxwin.h>
+#import "ImageX.tlb" no_namespace named_guids
+
 #include <WinDef.h>
 #include <vector>
 
@@ -61,6 +61,7 @@ private:
 	pCreateNewSiftMatchGPU _pCreateNewSiftMatchGPU;
 	SiftGPU* _sift_gpu;
 	SiftMatchGPU* _matcher;
+	IImageX* _pImage;
 };
 
 

@@ -1,5 +1,6 @@
 #define _SIFT_API_EXPORT
 #include "sift_wrapper.h"
+#include "GL/GL.h"
 
 Sift* Sift::_sift = NULL;
 
@@ -10,7 +11,9 @@ Sift::Sift()
 	, _pCreateNewSiftMatchGPU(NULL)
 	, _sift_gpu(NULL)
 	, _matcher(NULL)
+	, _pImage(NULL)
 {
+	CoInitialize(NULL);
 }
 
 bool Sift::Init()
@@ -18,6 +21,14 @@ bool Sift::Init()
 	_hsiftgpu = LoadLibrary("SiftGPU.dll");
 	if (_hsiftgpu == NULL)
 	{
+		return false;
+	}
+
+	HRESULT hres = CoCreateInstance(CLSID_ImageDriverX, NULL, CLSCTX_ALL, IID_IImageX, (void**)_pImage);
+	if (FAILED(hres))
+	{
+		FREE_MYLIB(_hsiftgpu);
+		_hsiftgpu = NULL;
 		return false;
 	}
 
@@ -62,6 +73,12 @@ Sift::~Sift()
 		FREE_MYLIB(_hsiftgpu);
 		_hsiftgpu = NULL;
 	}
+	if (_pImage != NULL)
+	{
+		_pImage->Release();
+		_pImage = NULL;
+	}
+	CoUninitialize();
 }
 
 Sift* Sift::GetInstance()
@@ -97,6 +114,57 @@ void Sift::GetKeyPoints(const char* image_path,
 		descriptor.resize(128*num);
 
 		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
+	}
+	else
+	{
+		_pImage->Open(_bstr_t(image_path), modeRead);
+
+		int cols = 0, rows = 0;
+		int bandnum = 0;
+		int bpb = 0;
+
+		_pImage->GetCols(&cols);
+		_pImage->GetRows(&rows);
+		_pImage->GetBandNum(&bandnum);
+		_pImage->GetBPB(&bpb);
+
+		if (bpb != 1)
+		{
+			_pImage->Close();
+			return;
+		}
+
+		const int block_size = 512;
+		unsigned char* pbuf = new unsigned char[bandnum*cols*block_size];
+		memset(pbuf, 0, bandnum*cols*block_size);
+		for (int i = 0; i < rows;)
+		{
+			if (i+block_size < rows)
+			{
+				_pImage->ReadImg(0, i, cols, i+block_size, pbuf, cols, block_size, bandnum, 0, 0, cols, block_size, -1, 0);
+				_sift_gpu->RunSIFT(cols, block_size, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
+				i += block_size;
+			}
+			else
+			{
+				delete []pbuf;
+				pbuf = new unsigned char[bandnum*cols*(rows-i)];
+				memset(pbuf, 0, bandnum*cols*(rows-i));
+				_pImage->ReadImg(0, i, cols, rows, pbuf, cols, rows-i, bandnum, 0, 0, cols, rows-i, -1, 0);
+				_sift_gpu->RunSIFT(cols, rows-i, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
+				i = rows;
+			}
+		}
+
+		int num = _sift_gpu->GetFeatureNum();
+		key.resize(num);
+		descriptor.resize(128*num);
+
+		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
+
+		delete []pbuf;
+		pbuf = NULL;
+		_pImage->Close();
 	}
 }
 
