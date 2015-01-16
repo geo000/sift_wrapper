@@ -128,42 +128,93 @@ void Sift::GetKeyPoints(const char* image_path,
 		_pImage->GetBandNum(&bandnum);
 		_pImage->GetBPB(&bpb);
 
-		if (bpb != 1)
+		if (bpb == 2)
 		{
 			_pImage->Close();
 			return;
 		}
-
-		const int block_size = 512;
-		unsigned char* pbuf = new unsigned char[bandnum*cols*block_size];
-		memset(pbuf, 0, bandnum*cols*block_size);
-		for (int i = 0; i < rows;)
+		else if (bpb == 1 && (bandnum == 1 || bandnum == 3))
 		{
-			if (i+block_size < rows)
+			std::vector<SiftGPU::SiftKeypoint> key_;
+			std::vector<float> descriptor_;
+			const int block_size = 512;
+			unsigned char* pbuf = new unsigned char[bandnum*cols*block_size];
+			memset(pbuf, 0, bandnum*cols*block_size);
+
+			for (int i = 0; i < rows;)
 			{
-				_pImage->ReadImg(0, i, cols, i+block_size, pbuf, cols, block_size, bandnum, 0, 0, cols, block_size, -1, 0);
-				_sift_gpu->RunSIFT(cols, block_size, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
-				i += block_size;
+				if (i+block_size < rows)
+				{
+					_pImage->ReadImg(0, i, cols, i+block_size, pbuf, cols, block_size, bandnum, 0, 0, cols, block_size, -1, 0);
+					if (bandnum == 1)
+					{
+						_sift_gpu->RunSIFT(cols, block_size, pbuf, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+					}
+					else
+					{
+						_sift_gpu->RunSIFT(cols, block_size, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
+					}
+					int num = _sift_gpu->GetFeatureNum();
+					key_.resize(num);
+					descriptor_.resize(128*num);
+					_sift_gpu->GetFeatureVector(&key_[0], &descriptor_[0]);
+
+					for (int n = 0; n < num; ++n)
+					{
+						key_[i].y = i+key_[i].y;
+						key.push_back(key_[i]);
+						for (int m = 0; m < 128; ++m)
+						{
+							descriptor.push_back(descriptor_[m]);
+						}
+					}
+
+					key_.swap(std::vector<SiftGPU::SiftKeypoint> ());
+					descriptor_.swap(std::vector<float> ());
+
+					i += block_size;
+				}
+				else
+				{
+					delete []pbuf;
+					pbuf = new unsigned char[bandnum*cols*(rows-i)];
+					memset(pbuf, 0, bandnum*cols*(rows-i));
+					_pImage->ReadImg(0, i, cols, rows, pbuf, cols, rows-i, bandnum, 0, 0, cols, rows-i, -1, 0);
+					if (bandnum == 1)
+					{
+						_sift_gpu->RunSIFT(cols, rows-i, pbuf, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+					}
+					else
+					{
+						_sift_gpu->RunSIFT(cols, rows-i, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
+					}
+
+					int num = _sift_gpu->GetFeatureNum();
+					key_.resize(num);
+					descriptor_.resize(128*num);
+					_sift_gpu->GetFeatureVector(&key_[0], &descriptor_[0]);
+
+					for (int n = 0; n < num; ++n)
+					{
+						key_[i].y = i+key_[i].y;
+						key.push_back(key_[i]);
+						for (int m = 0; m < 128; ++m)
+						{
+							descriptor.push_back(descriptor_[m]);
+						}
+					}
+
+					key_.swap(std::vector<SiftGPU::SiftKeypoint> ());
+					descriptor_.swap(std::vector<float> ());
+
+					i = rows;
+				}
 			}
-			else
-			{
-				delete []pbuf;
-				pbuf = new unsigned char[bandnum*cols*(rows-i)];
-				memset(pbuf, 0, bandnum*cols*(rows-i));
-				_pImage->ReadImg(0, i, cols, rows, pbuf, cols, rows-i, bandnum, 0, 0, cols, rows-i, -1, 0);
-				_sift_gpu->RunSIFT(cols, rows-i, pbuf, GL_RGB, GL_UNSIGNED_BYTE);
-				i = rows;
-			}
+
+			delete []pbuf;
+			pbuf = NULL;
 		}
 
-		int num = _sift_gpu->GetFeatureNum();
-		key.resize(num);
-		descriptor.resize(128*num);
-
-		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
-
-		delete []pbuf;
-		pbuf = NULL;
 		_pImage->Close();
 	}
 }
