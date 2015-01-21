@@ -114,6 +114,14 @@ void Sift::GetKeyPoints(const char* image_path,
 		descriptor.resize(128*num);
 
 		_sift_gpu->GetFeatureVector(&key[0], &descriptor[0]);
+		_pImage->Open(_bstr_t(image_path), modeRead);
+		int rows = 0;
+		_pImage->GetRows(&rows);
+		_pImage->Close();
+		for (int i = 0; i < num; ++i)
+		{
+			key[i].y = rows-key[i].y;
+		}
 	}
 	else
 	{
